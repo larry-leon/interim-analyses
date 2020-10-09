@@ -1,0 +1,705 @@
+\documentclass[10pt]{article}
+\usepackage{multicol}
+\usepackage{amssymb,mathrsfs,graphicx}
+\usepackage{enumerate}
+\usepackage{amsthm}
+\usepackage{hyperref}
+
+\usepackage{caption}
+%\usepackage{capt-of}
+
+\usepackage{amsmath}
+\usepackage{graphicx}
+\usepackage{mathptmx}
+\usepackage{natbib}
+
+\usepackage{longtable,ctable}
+\usepackage{amsmath}
+\usepackage{amsfonts}
+\usepackage{multirow}
+
+\usepackage{pdfpages}
+\theoremstyle{definition}
+\newtheorem{definition}{Definition}[section]
+
+\theoremstyle{remark}
+\newtheorem{remark}{Remark}
+
+\textheight=9.0in \textwidth=6.5in \topmargin=0in
+\evensidemargin=0in \oddsidemargin=0in
+
+\title{Notes On Interim Analyses}
+\author{Larry F. Le\'on, PhD}
+
+
+\begin{document}
+\maketitle
+
+\raggedbottom
+
+<<echo=FALSE>>=
+opts_chunk$set (warning = FALSE, message = FALSE, tidy=TRUE, echo=FALSE)
+@
+
+<<echo=TRUE>>=
+rm(list=ls())
+require(gsDesign)
+require(knitr)
+require(survival)
+require(Hmisc)
+require(kableExtra)
+
+source("../R/km_functions_twosample_weighting.R")
+source("../R/km_plot_twosample.R")
+
+source("../R/interim_analyses_core-functions_v0.R")
+source("../R/interim_datasets_v0.R")
+source("../R/get.analyses_functions_v0.R")
+source("../R/get.analyses_CR_functions_v0.R")
+
+source("../R/oc.interims_v0.R")
+
+
+
+@
+
+\section{Configuring \texttt{gsDesign} to closely match ``Study A'' interim OS analysis}
+
+In the following we produce a design to closely match ``Study A'' for the interim OS analyses assuming a significance level of $\alpha=0.02$ (1-sided).
+
+The design calls for $n=900$ patients with three interim analyses comparing OS in the ITT population ("all-comer") at alpha-level $0.02$ to achieve 88\% power.   The interims are conducted when 344, 536, and 688 
+events are observed corresponding to information fractions of 50\%, 78\%, and 100\% (resp.). The hazard ratio 
+crossing boundaries are 0.717, 0.813, and 0.851 with corresponding two-sided p-value boundaries of 0.002, 0.0162, and 0.0348.
+The expected interim analysis timings are estimated as 30, 42, and 58 months.
+
+We use the \texttt{gsDesign} study design parameters as inputs (sample size, target number of looks, and crossing boundaries) to our simulation functions to calculate further details on design operating characteristics.  The simulation code is based on two functions.  The function 
+\texttt{getdata.looks} simulates the interim analysis datasets based on the 
+interim target number of events.  For example, with 3 looks based on event triggers (target number of events) d1, d2 and d3 (say), 
+there will be 3 sets of data ``Look1'', ``Look2'', and ``Look3''.  For 10,000 simulations (say), Look1 will contain 
+the 10,000 simulated first look analysis statistics (Cox HR estimate, analysis time, 1-sided log-rank Z statistic and p-value, median estimates, and
+drop-out proportion); and similarly for Look2 and Look3.   For the interim analysis trigger, we specify that the target number of events 
+are ``strictly met'' in the sense that at least the target will be achieved with possible ``overage'' depending on discretess in the accumlation 
+of events.  This is implemented with the following options:  Target events are checked within follow-up intervals tau.min and 
+tau.max of length tau.seq (For example, every month (tau.seq=1/12) between 0 (tau.min=0) and 200 months (tau.max=200)).  If the target is contained 
+within two intervals, then these intervals are further searched (divided into lengths of dexact.len) to find the exact match or closest 
+to achieve at least the target.  Several accrual pattern options are available with the default being analogous to the EAST 
+algorithm with a ramp-up phase.  Default censoring is exponential.  Survival times are generating according to Weibull distributions 
+with the default being exponential (but can be according to different Weibull shape and scale parameters for the two treatment arms).
+
+With these interim analysis datasets the function \texttt{OC.interims} will 
+then calculate statistics (e.g., crossing probabilities) based on the input crossing boundaries such as OBF per \texttt{gsDesign} (or any other boundaries).
+
+Code is here: \url{https://github.com/larry-leon/interim-analyses}.
+
+
+See also the comprehensive R package \texttt{rpact}.  In particular there is a vignette by Wassmer, Pahlke, and Wolbers \url{https://www.rpact.org/vignettes} comparing \textt{rpact} with \texttt{gsDesign} [So this can be used as an indirect comparison with rpact :)].
+
+
+
+\subsection{Setting up \texttt{gsDesign}}
+A \texttt{gsDesign} configuration that closely matches the ``Study A'' protocol
+is described below.  The gsDesign specification calls for $n=906$ so the sample size slightly differs.  Assumptions 
+on accrual patterns may slightly differ.
+
+
+
+\begin{remark}
+Here we use the template found in the source for the gsDesign R package in \verb@/inst/doc/gsSurvTemplate.rnw@
+\end{remark}
+
+<<designparms,echo=TRUE>>=
+# Test type (one-sided [superiority])
+test.type<-1
+# study duration
+# T can be set to NULL if you want to 
+# fix enrollment and vary study duration
+T <- 58
+# follow-up duration of last patient enrolled
+minfup<-32
+# Enrollment duration will be 58-32
+# k looks 
+k <- 3
+# timing of interim analyses (k-1 increasing numbers >0 and <1)
+timing<-c(0.50,0.78,1)
+# efficacy bound spending function
+sfu <-"OF" 
+# power
+beta<-1-0.88
+# Uniform accrual with enrollment duration of 26 months
+R <- c(1) # relative enrollment rates during above periods 
+gamma<-c(906/26) 
+# median control time-to-event
+median <- 16
+# exponential dropout rate per unit of time
+eta <- 0.05/12
+# hypothesized experimental/control hazard ratio
+hr <-0.78
+# null hazard ratio (1 for superiority, >1 for non-inferiority)
+hr0 <- 1
+# Type I error (1-sided)
+alpha <-.02
+
+# time units
+timename <- "months"
+timename1 <- "month"
+# endpoint name
+ep <-"overall survival" 
+
+@
+
+<<gsdesign,tidy=FALSE>>=
+# generate design
+x.gsd <- gsSurv(k=k,test.type=test.type,timing=timing,R=R,gamma=gamma,eta=eta,
+            minfup=minfup,T=T,lambdaC=log(2)/median,
+            hr=hr,hr0=hr0,beta=beta,alpha=alpha,
+            sfu=sfu)
+@
+
+<<gsdesignEnroll,tidy=FALSE,echo=TRUE>>=
+# make a string with enrollment rates 
+# (assumes gamma is a single value or vector)
+x<-x.gsd
+nR <- length(x$R)
+if (nR==1){enrolrates <- paste("constant at a rate of ",
+                          round(gamma,1),"per",timename1,"")
+} else{
+enrolrates <- paste(c("piecewise constant at rates of ",
+ paste(round(as.vector(x$gamma),1)," for ",timename," ",
+       cumsum(c(0,x$R[1:(nR-1)])),
+       "-",cumsum(x$R),collapse=", "),sep=""),collapse="")
+}
+@
+
+\subsection{Summary of operating characteristics}
+
+
+<<CrossingTab1, results="asis",tidy=FALSE,message=FALSE>>=
+xprint(xtable(gsBoundSummary(x, logdelta=TRUE), 
+              digits=4, label="CrossingTab1", 
+              caption=summary(x)))
+@
+
+For a comparative trial we consider a 2-arm group sequential design with \Sexpr{ep} as the primary endpoint as shown in Table \ref{CrossingTab1}.
+Timing, number of events, sample size, boundaries (Z-values, nominal p-values, approximate hazard ratios) are shown as well as the probability of crossing study boundaries under the null and alternate hypotheses.
+The median time-to-event is assumed to be \Sexpr{median} \Sexpr{timename} in the control group.
+\Sexpr{if (hr0==1) paste("The trial is designed to demonstrate superiority of experimental treatment over control with an assumed hazard ratio of ",hr,".",sep="")}
+The total sample size is \Sexpr{ceiling(sum(x$eNE[k,]+x$eNC[k,]))} and a
+total of \Sexpr{ceiling(sum(x$eDE[k,]+x$eDC[k,]))} endpoints is required for the final analysis.
+Planned recruitment duration is \Sexpr{sum(x$R)} \Sexpr{timename} and the minimum follow-up planned is \Sexpr{round(x$minfup,1)} \Sexpr{timename}.
+Thus, the total expected study duration is \Sexpr{round(max(x$T),1)} \Sexpr{timename}.
+Enrollment is assumed to be \Sexpr{enrolrates}. The assumed dropout rate is \Sexpr{100*eta}\% per \Sexpr{timename1}.
+\Sexpr{if (x$k==2) paste("There is a single interim analysis planned after",ceiling(x$eDE[1,]+x$eDC[1,]),"events have accrued which is expected after approximately",round(x$T[1],1),timename,sep=" ")}.
+
+
+
+%\includepdf{``Study A''_AlphaAllocation_Scenarios.pdf}
+
+\section{Operating characteristics via simulations}
+
+\subsection{Code setup}
+<<mycode_setup,echo=TRUE>>=
+k<-3
+# From gsSurv
+# Sample size
+N<-ceiling(sum(x$eNE[k,]+x$eNC[k,])) 
+# Events for final analysis 
+d.FA<-ceiling(sum(x$eDE[k,]+x$eDC[k,]))
+
+# gsDesign crossing boundaries
+Z.looks<-c(x$upper$bound)
+alpha.looks<-c(1-pnorm(Z.looks))
+
+# Event-proportion interim triggers; Target # of events
+d.looks<-round(d.FA*c(0.5,0.78,1.0),1)
+d.looks<-floor(d.looks+0.5)
+
+# Median control (in months)
+m0<-16
+
+@
+
+\begin{figure}
+\begin{center}
+<<out.height="175px",out.width="300px",digits=3>>=
+plot(d.looks,alpha.looks,type="b",lty=2,col="black",lwd=3,xlab="Target # of events",ylab="P-value")
+lines(d.looks,c(0.02,0.02,0.02)/3,lty=1,col="grey",lwd=3)
+title(main="Log-rank p-value scale")
+legend(400,0.015,c("OBF","alpha-splitting"),col=c("black","grey"),lwd=3,lty=c(2,1),bty="n")
+@
+  \end{center}
+\caption{``Study A'' Interim Analysis Crossing boundaries: P-value (1-sided) boundaries $=\Sexpr{alpha.looks}$; alpha-splitting $=\Sexpr{round(c(rep(0.02,3)/3),4)}$}
+\end{figure}
+
+<<mycode,echo=TRUE,tidy=FALSE,digits=3>>=
+# The first 2 simulations will be plot (specified by option kmplot.nsims=2);
+# For each simulation the 3 interim analyses are displayed
+options(digits=3)
+par(mfrow=c(2,3))
+# Simulations under hr=0.78
+# Note: 10,000 simulations (n.sims=10000) are previously run and stored
+# 10,000 takes ~ 35 minutes on my workstation
+# Approximately 3.5 minutes per 1,000 simulations 
+
+
+# Projected enrollment (Ramp-up phase)
+# Note: Ramp.up needs to be integer
+# I'm not aware of the ramp-up assumptions used for "Study A"
+# The following seems to approximate the reported timing estimates
+Ramp.up<-c(34,35)
+# n=34 in first month; n=35 in second month 
+nRamp.after<-36
+# n=36 per month (after 3 months)
+
+accruals<-get.accrual(N=N,rand.ratio=1,Accrue.type="EastProjection",Ramp.up=Ramp.up,nRamp.after=nRamp.after)
+AC.0<-accruals$AC.0
+AC.1<-accruals$AC.1
+
+n0<-length(AC.0)
+n1<-length(AC.1)
+i0<-rep(1,n0)
+i1<-rep(1,n1)
+a0<-sort(AC.0)
+a1<-sort(AC.1)
+a.both<-c(a0,a1)
+i.both<-c(i0,i1)
+
+#plot(sort(a.both),cumsum(i.both),xlab="Weeks",ylab="Cumulative Enrollment",type="s")
+#lines(a0,cumsum(i0),type="s",lty=1,lwd=2,col="grey")
+#lines(a1,cumsum(i1),type="s",lty=1,lwd=2,col="blue")
+
+accrue.time<-ceiling(max(c(AC.0,AC.1)))
+
+cat("Assumed accrual time with ramp-up (in months)",c(accrue.time),"\n")
+
+# Here run 10 sims for illustration 
+
+sims<-10 
+# We plot the 3 interim analysis KMs for the first 2 simulations (kmplot.nsims=2)
+# and by default the code will output the first dataset)
+
+df.alt1<-getdata.looks(sims=sims,med0=m0,hr=0.78,
+d.looks=d.looks,
+S.type="Weibull",
+sim.status=TRUE,
+tau.min=0,tau.max=100,tau.seq=1/12,
+max.follow=100,
+d.exact=TRUE,dexact.len=100,
+quant=0.5,kmplot.nsims=2,
+AC1=AC.1, AC0=AC.0,Accrue.type='EastProjection',
+drop.type="east",dropout.0=0.05,dropout.1=0.05,tau.drop=12)
+
+# Note: Previous run with 10,000 simulations is stored
+#save(df.alt1,file="output/ex1_alt1.Rdata")
+
+@ 
+
+
+<<mycode2,echo=TRUE,eval=FALSE>>=
+# Under null
+# Not run (eval=FALSE)
+sims<-10000
+df.null<-getdata.looks(sims=sims,med0=m0,hr=1.0,
+d.looks=d.looks,
+S.type="Weibull",
+sim.status=TRUE,
+tau.min=0,tau.max=100,tau.seq=1/12,
+max.follow=100,
+d.exact=TRUE,dexact.len=100,
+quant=0.5,kmplot.nsims=2,
+AC1=AC.1, AC0=AC.0,Accrue.type='EastProjection',
+drop.type="east",dropout.0=0.05,dropout.1=0.05,tau.drop=12)
+
+
+#save(df.null,file="output/ex1_null.Rdata")
+
+@
+
+
+<<echo=TRUE>>=
+# loads df.alt1
+load("output/ex1_alt1.Rdata")
+# loads df.null
+load("output/ex1_null.Rdata")
+
+df.names<-c("null","alt1")
+
+stats<-c("Look","d","p(cross)","mDD","t(cross)","t(L)","t(U)","Avg(N1)","N1(L)","N1(U)","% Reject H0","X-ByNow")
+
+main.caption<-c("Operating characteristics under standard exponential data generating model; Calculations are based on 10,000 simulations.
+                \\label{tab:crm1oc}")
+
+footnote.caption<-c("E denotes the target events;  p* are efficacy crossing boundaries (p-value scale); mDD denotes the empirical mdd (largest point estimate corresponding to efficacy boundary crossings); Timing (weeks) denotes the interim analysis timing, Avg (95% CI); Sample Size denotes the experimental interim sample size, Avg (95% CI); Rej-H0 denotes the incremental efficacy stopping probabilitiy; Eff-Yet denotes the cumulative efficacy crossing probability (crossing by the time of the look).")
+
+names.table<-c("Look","E","p*","mDD","Timing","Sample Size","Rej-H0","Eff-Yet")
+
+df.oc<-NULL
+for(nn in 1:length(df.names)){
+dfa<-switch(nn,df.null,df.alt1,df.alt2,df.alt3,df.alt4,df.alt5)
+name.dgm<-df.names[nn]
+crossings<-OC.interims(data.looks=dfa,d.looks=d.looks,alpha.looks=alpha.looks,direction="GT",details=FALSE)
+df.obf<-crossings$result
+df.obf<-df.obf[,c(stats)]
+assign(paste("cross.eff",name.dgm,sep="."),crossings$result[,c("% Reject H0")])
+assign(paste("dfstop.sizes",name.dgm,sep="."),crossings$data.stopped[,c("N1.IA","N0.IA","N.IA")])
+
+df.oc<-rbind(df.oc,df.obf)
+}
+rownames(df.oc)<-c()
+df.oc<-round(df.oc,3)
+df.oc_new<-df.oc
+# Include CIs for N in parenthesis
+
+# Timings
+loc1<-which(colnames(df.oc)==stats[5])
+loc2<-which(colnames(df.oc)==stats[6])
+loc3<-which(colnames(df.oc)==stats[7])
+
+df.oc_new<-df.oc[,-c(loc2,loc3)]
+
+for(jj in 1:nrow(df.oc)){
+a1<-df.oc[jj,c(loc1,loc2,loc3)]
+a1<-round(a1,digits=1)
+res1<-paste(a1[1],a1[2],sep=c(" ("))
+res2<-paste(res1,a1[3],sep=c(","))
+res2<-paste0(res2,")")
+df.oc_new[jj,5]<-c(res2)
+}
+
+
+# Sample size
+loc1<-which(colnames(df.oc_new)==stats[8])
+loc2<-which(colnames(df.oc_new)==stats[9])
+loc3<-which(colnames(df.oc_new)==stats[10])
+
+df.oc_new2<-df.oc_new[,-c(loc2,loc3)]
+
+for(jj in 1:nrow(df.oc_new)){
+a1<-as.numeric(df.oc_new[jj,c(loc1,loc2,loc3)])
+a1<-round(a1,digits=0)
+res1<-paste(a1[1],a1[2],sep=c(" ("))
+res2<-paste(res1,a1[3],sep=c(","))
+res2<-paste0(res2,")")
+df.oc_new2[jj,6]<-c(res2)
+}
+@
+
+\newpage
+
+
+
+<<echo=FALSE>>=
+n.looks<-length(d.looks)
+oc.tab<-kable(df.oc_new2,longtable=FALSE,booktabs=TRUE,format="latex",align='c',escape=TRUE, 
+col.names=names.table,
+caption=main.caption) %>%
+kable_styling(bootstrap_options=c("striped","hover"), full_width=F, position="center",font_size=11,latex_options=c("hold_position")) %>%
+group_rows("Under null: HR=1.0", 1, 3) %>%
+group_rows("Under alternative: Avg HR=0.78", 4, 6) 
+
+oc.tab2<-add_footnote(oc.tab,c(general_title = "Note.",
+general=footnote.caption), notation="none",threeparttable = TRUE)
+
+#save(oc.tab2,file="output/ex1_OCtable.Rdata")
+@
+
+
+\Sexpr{oc.tab2}
+
+
+\bigskip
+\noindent
+{\it Under the null}: The overall type-1 error is \Sexpr{100*sum(cross.eff.null)}\%; The average total sample size is \Sexpr{round(mean(dfstop.sizes.null$N.IA),0)} (95\% CI=\Sexpr{quantile(dfstop.sizes.null$N.IA,c(0.025))}, \Sexpr{quantile(dfstop.sizes.null$N.IA,c(0.975))}).
+
+
+\bigskip
+\noindent
+{\it Under the alternative}: The overall power is \Sexpr{100*sum(cross.eff.alt1)}\%; The average total sample size is \Sexpr{round(mean(dfstop.sizes.alt1$N.IA),0)} (95\% CI=\Sexpr{quantile(dfstop.sizes.alt1$N.IA,c(0.025))}, \Sexpr{quantile(dfstop.sizes.alt1$N.IA,c(0.975))}).
+
+
+The operating characteristics summarized by gsDesign are ---
+<<CrossingTab3, results="asis",tidy=FALSE,message=FALSE,tidy=FALSE>>=
+xprint(xtable(gsBoundSummary(x.gsd, logdelta=TRUE), 
+              digits=4, label="CrossingTab3", 
+              caption=summary(x.gsd)))
+@
+
+\section{Timing and hazard ratio estimation properties}
+
+
+<<>>=
+
+load("output/ex1_alt1.Rdata")
+
+df.pow<-df.alt1
+df.look1<-df.pow$Out$Look1
+tau.look1<-df.look1$tau.IA
+hr.look1<-exp(df.look1$bhat.IA)
+rej.look1<-ifelse(df.look1$Zlr.IA>=Z.looks[1],1,0)
+hr.cross1<-hr.look1[which(rej.look1==1)]
+
+df.hr1<-data.frame(hr.cross1)
+names(df.hr1)<-c("hr")
+df.hr1$look<-c("look1")
+
+df.est1<-data.frame(hr.look1,tau.look1)
+names(df.est1)<-c("hr","tau")
+df.est1$look<-c("look1")
+
+df.cross1<-df.look1[which(rej.look1==1),]
+df.cross1$look<-c("look1")
+
+# Going to 2nd look conditional on NOT crossing at first look
+# Note: Default is stopping at futility
+crossings<-OC.interims(d.looks=d.looks[c(1,2)],
+alpha.looks=alpha.looks[c(1,2)],
+data.looks=df.pow,details=FALSE)
+df.look2<-crossings$data.stopped
+# Includes look1 sequences that stopped at look1;
+# Look 2 data --> sequences that did NOT stop at look1
+df.look2<-df.look2[which(df.look2$look==2),]
+
+tau.look2<-df.look2$tau.IA
+hr.look2<-exp(df.look2$bhat.IA)
+rej.look2<-ifelse(df.look2$Zlr.IA>=Z.looks[2],1,0)
+hr.cross2<-hr.look2[which(rej.look2==1)]
+
+df.hr2<-data.frame(hr.cross2)
+names(df.hr2)<-c("hr")
+df.hr2$look<-c("look2")
+
+df.est2<-data.frame(hr.look2,tau.look2)
+names(df.est2)<-c("hr","tau")
+df.est2$look<-c("look2")
+
+df.cross2<-df.look2[which(rej.look2==1),]
+df.cross2$look<-c("look2")
+
+# Going to 3nd look conditional on NOT crossing at first and second looks
+crossings<-OC.interims(d.looks=d.looks[c(1,2,3)],
+alpha.looks=alpha.looks[c(1,2,3)],
+data.looks=df.pow,details=FALSE)
+df.look3<-crossings$data.stopped
+# Includes look1/look2 sequences that stopped at look1/look2;
+# Look 3 data --> sequences that did NOT stop at look1 or look2;
+# Look 3 data
+df.look3<-df.look3[which(df.look3$look==3),]
+
+tau.look3<-df.look3$tau.IA
+hr.look3<-exp(df.look3$bhat.IA)
+rej.look3<-ifelse(df.look3$Zlr.IA>=Z.looks[3],1,0)
+hr.cross3<-hr.look3[which(rej.look3==1)]
+df.hr3<-data.frame(hr.cross3)
+names(df.hr3)<-c("hr")
+df.hr3$look<-c("look3")
+
+df.est3<-data.frame(hr.look3,tau.look3)
+names(df.est3)<-c("hr","tau")
+df.est3$look<-c("look3")
+
+df.cross3<-df.look3[which(rej.look3==1),]
+df.cross3$look<-c("look3")
+
+
+df.est<-rbind(df.est1,df.est2,df.est3)
+
+# Restrict to common statistics from df.cross1
+
+df.cross2<-df.cross2[,c(names(df.cross1))]
+
+df.cross3<-df.cross3[,c(names(df.cross1))]
+
+# Final look without any stopping
+# What would happend without interim analyses
+df.look0<-df.pow$Out$Look3
+df.look0$look<-c("look0")
+#df.est0<-data.frame(exp(df.look0$bhat.IA),df.look0$tau)
+df.hr0<-data.frame(exp(df.look0$bhat.IA))
+#names(df.est0)<-c("hr","tau")
+names(df.hr0)<-c("hr")
+df.hr0$look<-c("look0")
+df.hr<-rbind(df.hr1,df.hr2,df.hr3,df.hr0)
+
+df.cross<-rbind(df.cross1,df.cross2,df.cross3,df.look0)
+
+df.cross$hr<-exp(df.cross$bhat.IA)
+
+# final analyses that would be significant at 0.025
+df.look0.cross<-df.look0[which(df.look0$Zlr.IA>=1.96),]
+
+@
+
+\begin{figure}[h]
+\begin{center}
+<<echo=FALSE,out.height="300px",out.width="450px">>=
+est.results<-df.cross
+est.order<-c("look1","look2","look3","look0")
+pv<-ggplot(est.results, aes(x=factor(look,levels=est.order), y=hr))
+pv1<-pv +  geom_violin(aes(fill = factor(look,levels=est.order)),draw_quantiles=c(0.25,0.5,0.75))
+pv2<-pv1+labs(x="Look",y="Cox hazard ratio estimates")
+pv3<-pv2 + coord_flip()
+pv4<-pv3 + theme(legend.position="none") # Remove legend
+plot(pv4)
+@
+\end{center}
+\caption{Cox hazard ratio estimates:
+Look 1 includes look=1 sequences that stopped at look=1 for efficacy;
+Look 2 includes look=2 sequences that did NOT stop at look=1 (for efficacy or futility) but stopped at look=2 for efficacy;
+and Look 3 includes look=3 sequences that did NOT stop at look=1 or look=2 but stopped at look=3 for efficacy.
+Look 0 denotes all final analyses where interim analyses were not conducted (i.e., final analyses for all data sequences).
+The vertical lines denote the quartiles ($25\%$, $50\%$, and $75\%$).
+}\label{fig:hrs}
+\end{figure}
+
+
+\begin{figure}[h]
+\begin{center}
+<<echo=FALSE,out.height="300px",out.width="450px">>=
+est.results<-df.cross
+est.order<-c("look1","look2","look3","look0")
+pv<-ggplot(est.results, aes(x=factor(look,levels=est.order), y=tau.IA))
+pv1<-pv +  geom_violin(aes(fill = factor(look,levels=est.order)),draw_quantiles=c(0.25,0.5,0.75))
+pv2<-pv1+labs(x="Look",y="Interim analysis timings")
+pv3<-pv2 + coord_flip()
+pv4<-pv3 + theme(legend.position="none") # Remove legend
+plot(pv4)
+@
+\end{center}
+\caption{Interim analysis timings:
+Look 1 includes look=1 sequences that stopped at look=1 for efficacy;
+Look 2 includes look=2 sequences that did NOT stop at look=1 (for efficacy or futility) but stopped at look=2 for efficacy;
+and Look 3 includes look=3 sequences that did NOT stop at look=1 or look=2 but stopped at look=3 for efficacy.
+Look 0 denotes all final analyses where interim analyses were not conducted (i.e., final analyses for all data sequences).
+The vertical lines denote the quartiles ($25\%$, $50\%$, and $75\%$).
+}\label{fig:timings}
+\end{figure}
+
+
+\begin{figure}[h]
+\begin{center}
+<<echo=FALSE,out.height="300px",out.width="450px">>=
+df.cross$median.diff<-df.cross$m1.IA-df.cross$m0.IA
+
+est.results<-df.cross
+est.order<-c("look1","look2","look3","look0")
+pv<-ggplot(est.results, aes(x=factor(look,levels=est.order), y=median.diff))
+pv1<-pv +  geom_violin(aes(fill = factor(look,levels=est.order)),draw_quantiles=c(0.25,0.5,0.75))
+pv2<-pv1+labs(x="Look",y="Differences in medians (Experimental-Control)")
+pv3<-pv2 + coord_flip()
+pv4<-pv3 + theme(legend.position="none") # Remove legend
+plot(pv4)
+@
+\end{center}
+\caption{Differences in medians, where estimable (Experimental-Control):
+Look 1 includes look=1 sequences that stopped at look=1 for efficacy;
+Look 2 includes look=2 sequences that did NOT stop at look=1 (for efficacy or futility) but stopped at look=2 for efficacy;
+and Look 3 includes look=3 sequences that did NOT stop at look=1 or look=2 but stopped at look=3 for efficacy.
+Look 0 denotes all final analyses where interim analyses were not conducted (i.e., final analyses for all data sequences).
+The vertical lines denote the quartiles ($25\%$, $50\%$, and $75\%$).
+}\label{fig:mediandiff}
+\end{figure}
+
+
+\newpage
+
+\section{Some notes on the target number of events, dropouts, and medians}
+
+
+<<echo=TRUE>>=
+df.pow<-df.alt1
+
+df.look1<-df.pow$Out$Look1
+df.look2<-df.pow$Out$Look2
+df.look3<-df.pow$Out$Look3
+#print(summary(df.look1))
+# Note: here m.diff.IA and se.diff.IA denote RMST estimates;
+# There is an option for this (get.mean=TRUE); 
+# BUt default=FALSE since timing is increased 
+
+df.look1$look=1
+df.look2$look=2
+df.look3$look=3
+
+df.looks<-rbind(df.look1,df.look2,df.look3)
+
+@
+
+\subsection{Look=1 details}
+The target number of events at the first interim look are met at rate $\approx \Sexpr{100*round(mean(c(df.look1$d.IA==d.looks[1])),3)}\%$. 
+The proportion below are $\Sexpr{100*round(mean(c(df.look1$d.IA<d.looks[1])),3)}\%$
+and the proportion that exceed are $\Sexpr{100*round(mean(c(df.look1$d.IA>d.looks[1])),3)}\%$ 
+(The maximum number of events over target is $\Sexpr{max(c(df.look1$d.IA-d.looks[1]))}$ events).
+The average drop-out rates for the control and experimental groups by the time of the first look are
+$\Sexpr{100*round(mean(df.look1$drop0.IA),3)}\%$ and $\Sexpr{100*round(mean(df.look1$drop1.IA),3)}\%$, respectively.
+The medians for control and experimental are reached (estimable) at rates $\Sexpr{100*round(mean(!is.na(df.look1$m0.IA)),2)}\%$ 
+and $\Sexpr{100*round(mean(!is.na(df.look1$m1.IA)),2)}\%$, respectively
+
+\begin{figure}
+\begin{center}
+<<medians_look1,echo=FALSE,out.height="200px",out.width="400px">>=
+par(mfrow=c(1,2))
+hist(df.look1$m0.IA,main="",xlab="Control median estimates")
+hist(df.look1$m1.IA,main="",xlab="Experimental median estimates")
+@
+\end{center}
+\caption{Histograms of Kaplan-Meier medians at look=1}.
+}\label{fig:medians_look1}
+\end{figure}
+
+
+\subsection{Look=2 details}
+The target number of events at the second interim look (not stopping prior to) are met at rate $\approx \Sexpr{100*round(mean(c(df.look2$d.IA==d.looks[2])),3)}\%$. 
+The proportion below are $\Sexpr{100*round(mean(c(df.look2$d.IA<d.looks[2])),3)}\%$
+and the proportion that exceed are $\Sexpr{100*round(mean(c(df.look2$d.IA>d.looks[2])),3)}\%$ 
+(The maximum number of events over target is $\Sexpr{max(c(df.look2$d.IA-d.looks[2]))}$ events).
+The average drop-out rates for the control and experimental groups by the time of the second look (not stopping prior to) are
+$\Sexpr{100*round(mean(df.look2$drop0.IA),3)}\%$ and $\Sexpr{100*round(mean(df.look2$drop1.IA),3)}\%$, respectively.
+The medians for control and experimental are reached (estimable) at rates $\Sexpr{100*round(mean(!is.na(df.look2$m0.IA)),2)}\%$ 
+and $\Sexpr{100*round(mean(!is.na(df.look2$m1.IA)),3)}\%$, respectively
+
+
+\subsection{Look=3 (final analysis) details}
+The target number of events at the third interim look (not stopping prior ro) are met at rate $\approx \Sexpr{100*round(mean(c(df.look3$d.IA==d.looks[3])),3)}\%$. 
+The proportion below are $\Sexpr{100*round(mean(c(df.look3$d.IA<d.looks[3])),2)}\%$
+and the proportion that exceed are $\Sexpr{100*round(mean(c(df.look3$d.IA>d.looks[3])),3)}\%$ 
+(The maximum number of events over target is $\Sexpr{max(c(df.look3$d.IA-d.looks[3]))}$ events).
+The average drop-out rates for the control and experimental groups by the time of the first look are
+$\Sexpr{100*round(mean(df.look3$drop0.IA),3)}\%$ and $\Sexpr{100*round(mean(df.look3$drop1.IA),3)}\%$, respectively.
+The medians for control and experimental are reached (estimable) at rates $\Sexpr{100*round(mean(!is.na(df.look3$m0.IA)),3)}\%$ 
+and $\Sexpr{100*round(mean(!is.na(df.look3$m1.IA)),3)}\%$, respectively
+
+
+
+\subsection{Summary of un-conditional (with respect to stopping) statistics across looks}
+<<echo=TRUE,tidy=FALSE>>=
+summary.looks<-summary(look~tau.IA+Zlr.IA+exp(bhat.IA)+m0.IA+m1.IA+drop0.IA+drop1.IA, 
+                      method="reverse", overall=FALSE, test=FALSE, data=df.looks)
+w<-latex(summary.looks,file="output/summary_looks.tex",digits=2, title='', where="",
+caption="Summary details for interim looks. Statistics are un-conditional with respect to stopping:
+$\\tau_{IA}$ denotes the interim timming; $Zlr.IA$ the interim z-crossing boundary; 
+$\\exp(bhat.IA)$ denotes the interim hazard ratio; m0.IA (m1.IA) denotes the median for control (experimental);
+and drop0.IA (drop1.IA) denotes the dropout proportion for control (experimental).",
+label="table:summary_looks")
+@
+
+
+\input{"output/summary_looks.tex"}
+
+
+\section{Some potential differences with gsDesign}
+I am only recently using the gsDesign package.  I suspect there may be differences in the accrual algorithms (gsDesign as specified 
+implements constant accrual of 34.82 in 26 months; My algorithm requires integers and attempts to divide evenly between treatments 
+within accrual windows). It also appears that my current use of gsDesign implements a ``hard stop'' at 58 months and it does not 
+appear the final target of 689 events is always reached (from the summary below)?  But I'm not sure about that.
+The interim analysis trigger in my code strictly requires the target number of events to be met (and sometimes goes beyond depending 
+on discreteness in terms of event accumulations).
+
+Whatever the differences, they seem to be mild in terms of how close the key statistics match.
+
+
+<<CrossingTab2,echo=FALSE>>=
+print(x)
+@
+
+
+
+\end{document}
