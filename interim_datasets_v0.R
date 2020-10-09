@@ -774,7 +774,7 @@ if(sim==1 & tau.look==tau.final) df.sim1<-Looks$df.cr
   
   Out<-as.list(Out)
   
-  return(list(Out=Out,pcnt.ltfu1=pcnt.ltfu1,pcnt.ltfu0=pcnt.ltfu0,pcnt.ltfu=pcnt.ltfu,d.maxs=d.maxs,df.sim1=df.sim1,Out.final=Looks$out.final.sim))
+  return(list(Out=Out,pcnt.ltfu1=pcnt.ltfu1,pcnt.ltfu0=pcnt.ltfu0,pcnt.ltfu=pcnt.ltfu,d.maxs=d.maxs,df.sim1=df.sim1,Out.final=Looks$out.final.sim,minutes=t.min))
 }
 
 

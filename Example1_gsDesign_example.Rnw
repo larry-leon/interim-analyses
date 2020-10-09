@@ -48,6 +48,7 @@ require(knitr)
 require(survival)
 require(Hmisc)
 require(kableExtra)
+require(formatR)
 
 source("../R/km_functions_twosample_weighting.R")
 source("../R/km_plot_twosample.R")
@@ -56,10 +57,7 @@ source("../R/interim_analyses_core-functions_v0.R")
 source("../R/interim_datasets_v0.R")
 source("../R/get.analyses_functions_v0.R")
 source("../R/get.analyses_CR_functions_v0.R")
-
 source("../R/oc.interims_v0.R")
-
-
 
 @
 
@@ -83,7 +81,7 @@ of events.  This is implemented with the following options:  Target events are c
 tau.max of length tau.seq (For example, every month (tau.seq=1/12) between 0 (tau.min=0) and 200 months (tau.max=200)).  If the target is contained 
 within two intervals, then these intervals are further searched (divided into lengths of dexact.len) to find the exact match or closest 
 to achieve at least the target.  Several accrual pattern options are available with the default being analogous to the EAST 
-algorithm with a ramp-up phase.  Default censoring is exponential.  Survival times are generating according to Weibull distributions 
+algorithm with a ramp-up phase.  Default censoring is exponential.  Survival times are generated according to Weibull distributions 
 with the default being exponential (but can be according to different Weibull shape and scale parameters for the two treatment arms).
 
 With these interim analysis datasets the function \texttt{OC.interims} will 
@@ -237,9 +235,6 @@ options(digits=3)
 par(mfrow=c(2,3))
 # Simulations under hr=0.78
 # Note: 10,000 simulations (n.sims=10000) are previously run and stored
-# 10,000 takes ~ 35 minutes on my workstation
-# Approximately 3.5 minutes per 1,000 simulations 
-
 
 # Projected enrollment (Ramp-up phase)
 # Note: Ramp.up needs to be integer
@@ -382,6 +377,9 @@ res2<-paste0(res2,")")
 df.oc_new2[jj,6]<-c(res2)
 }
 @
+
+\noindent
+Note: Minutes for simulations are \Sexpr{df.alt1$minutes} and \Sexpr{df.null$minutes} for the alternative and null models, respectively.
 
 \newpage
 
