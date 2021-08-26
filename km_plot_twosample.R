@@ -11,6 +11,7 @@ details=FALSE,put.legend.cox='topright',put.legend.lr='top',del.med=0.075,lr.dig
 direction="any",
 tpoints.add=c(-1),by.risk=NULL,Xlab="time",Ylab="proportion surviving",col.1="black",col.2="blue",show.med=FALSE,med.cex=1.25,risk.cex=1,
 quant=0.5,
+what.plot="KM",
 censor.mark.all=TRUE,show.ticks=TRUE,risk.set=TRUE,ymin=-0.125,ymax=1,
 add.segment=FALSE,risk.add=NULL,xmin=0,xmax=NULL,x.truncate=NULL,time.zero=0.0,prob.points=c(seq(0.1,1.0,by=0.1))){
 
@@ -256,11 +257,16 @@ S1.KM.plot<-fit1$S.KM
 fit2<-NA.CHR.Weighted(time=x2,Delta=(eta2==1),W.n=w2,W.d=w2,at.points=at.points2.plot)
 S2.KM.plot<-fit2$S.KM
 
+if(what.plot=="KM"){
 Y1.plot<-S1.KM.plot 
 Y2.plot<-S2.KM.plot
+}
 
-Y1<-S1.KM
-Y2<-S2.KM
+if(what.plot=="1-KM"){
+Y1.plot<-1-S1.KM.plot 
+Y2.plot<-1-S2.KM.plot
+}
+
 
 if(is.null(x.truncate)) xmax<-max(c(at.points,xmax))
 if(!is.null(x.truncate)) xmax<-x.truncate
@@ -268,12 +274,16 @@ if(!is.null(x.truncate)) xmax<-x.truncate
 plot(at.points1.plot,Y1.plot,type="s",ylim=c(ymin,ymax),xlim=c(xmin,xmax),lty=1,col=col.1,lwd=2,xlab=Xlab,ylab=Ylab,axes=FALSE)
 lines(at.points2.plot,Y2.plot,lty=1,type="s",col=col.2,lwd=2)
 
-if(show.ticks==TRUE){
-points(x1.cens,Y1[x1.match],pch=3,col=col.1)
-points(x2.cens,Y2[x2.match],pch=3,col=col.2)
+if(show.ticks==TRUE & what.plot=="KM"){
+points(x1.cens,S1.KM[x1.match],pch=3,col=col.1)
+points(x2.cens,S2.KM[x2.match],pch=3,col=col.2)
 }
 
-#if(what.toplot=="KM") abline(v=0,col="grey",lwd=3,lty=2)
+if(show.ticks==TRUE & what.plot=="1-KM"){
+points(x1.cens,1-S1.KM[x1.match],pch=3,col=col.1)
+points(x2.cens,1-S2.KM[x2.match],pch=3,col=col.2)
+}
+
 
 abline(h=0,lty=1,col=1)
 #axis(2,at=c(0.0,0.2,0.4,0.5,0.6,0.8,1.0))

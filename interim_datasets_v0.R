@@ -1,5 +1,5 @@
 
-# For competing risk data, dgp.j (j=0,1) containg the data-generating-processes for control (j=0) and experimental treatment (j=1)
+# For competing risk data, dgp.j (j=0,1) contain the data-generating-processes for control (j=0) and experimental treatment (j=1)
 
 getdata.looks<-function(sims,N1,N0,med0,hr,d.looks=NULL,d.exact=FALSE,dexact.len=50,seed.start=8316951,get.final=FALSE,
                         S.type="Weibull",cr.analysis="FG",cr_event.labels=c("censor","outcome","death"),
@@ -7,10 +7,12 @@ getdata.looks<-function(sims,N1,N0,med0,hr,d.looks=NULL,d.exact=FALSE,dexact.len
                         nph.cp1=NULL,cp.tau1=NULL,
                         nph.cp0=NULL,cp.tau0=NULL,
                         dgp.1=NULL,dgp.0=NULL,tau.inf=30,
-                        Accrue.type='EastProjection',direction="GT",dilution=0.0,AC1=NULL,AC0=NULL,max.follow=Inf,
-                                  d.override=TRUE,kmplot.nsims=9,
+                        Accrue.type='EastProjection',direction="GT",dilution=0.0,
+                        AC1=NULL,AC0=NULL,max.follow=Inf,
+                                  d.override=TRUE,kmplot.nsims=9,what.plot="KM",
                                   quant=0.5,sim.status=FALSE,stop.dl.error=FALSE,
-                                  interpolate=FALSE,show.curves=FALSE,S1.0=NULL,S0.0=NULL,t1.points=NULL,t0.points=NULL,
+                                  interpolate=FALSE,show.curves=FALSE,
+                                  S1.0=NULL,S0.0=NULL,t1.points=NULL,t0.points=NULL,
                                   show.interim.obs=FALSE,fit1=NULL,fit2=NULL,
                                   dropout.0=0.0,dropout.1=0.0,accrue.time=NULL,tau.min=1,tau.max=100,tau.seq=1,tau.IA.max=NULL,tau.FA.max=NULL,
                                   no.dropout=FALSE,shape.1=1,shape.0=1,tau.drop=tau.max,
@@ -108,7 +110,7 @@ median.0<-min(dgp.0$tpoints[which(dgp.0$F1.sub>=0.5)])
   }
   
   
-  if(drop.type=="uniform"){
+if(drop.type=="uniform"){
   
 if(hr==1) scale.1<-scale.0  
     # Uniform censoring parameters
@@ -168,13 +170,13 @@ if(S.type!="Weibull-CR" & S.type!="exp_piecewise"){
     if(dilution==0){
     if(drop.type=="uniform"){
       data1<-Data.sim(n=N1,shape=shape.1,scale=scale.1,Accrue=accrue.time,tau=tau.max,max.follow=max.follow,
-                      drop.type=drop.type,cmin=a.1,cmax=b.1,Accrue.type=Accrue.type,Entry.obs=Entry1.obs,S.type=S.type,S.0=S1.draw,tpoints.0=t1.draw,
+                      drop.type=drop.type,cmin=a.1,cmax=b.1,Accrue.type=Accrue.type,Entry.obs=Entry1.obs,S.type=S.type,S.0=S1.0,tpoints.0=t1.points,
                       R=rep(1,N1),gamma1=gamma1,gamma2=gamma2,bW=bW,lamW=lamW,lamT=lamT,beta1=beta1,beta2=beta2,cw1=cw1,cw2=cw2,
                       lamP=lamP1,bP=bP1)
     }
     if(drop.type=="east"){
       data1<-Data.sim(n=N1,shape=shape.1,scale=scale.1,Accrue=accrue.time,tau=tau.max,max.follow=max.follow,
-                      drop.type=drop.type,scale.drop=lambdac.1,Accrue.type=Accrue.type,Entry.obs=Entry1.obs,S.type=S.type,S.0=S1.draw,tpoints.0=t1.draw,
+                      drop.type=drop.type,scale.drop=lambdac.1,Accrue.type=Accrue.type,Entry.obs=Entry1.obs,S.type=S.type,S.0=S1.0,tpoints.0=t1.points,
                       R=rep(1,N1),gamma1=gamma1,gamma2=gamma2,bW=bW,lamW=lamW,lamT=lamT,beta1=beta1,beta2=beta2,cw1=cw1,cw2=cw2,
                       lamP=lamP1,bP=bP1)
     }
@@ -197,13 +199,13 @@ if(S.type!="Weibull-CR" & S.type!="exp_piecewise"){
       
       if(drop.type=="uniform"){
         data1a<-Data.sim(n=n1.dilute,shape=shape.0,scale=scale.0,Accrue=accrue.time,tau=tau.max,max.follow=max.follow,
-                        drop.type=drop.type,cmin=a.0,cmax=b.0,Accrue.type=Accrue.type,Entry.obs=Entry1.dilute,S.type=S.type,S.0=S0.draw,tpoints.0=t0.draw,
+                        drop.type=drop.type,cmin=a.0,cmax=b.0,Accrue.type=Accrue.type,Entry.obs=Entry1.dilute,S.type=S.type,S.0=S1.0,tpoints.0=t1.points,
                         R=rep(1,n1.dilute),gamma1=gamma1,gamma2=gamma2,bW=bW,lamW=lamW,lamT=lamT,beta1=beta1,beta2=beta2,cw1=cw1,cw2=cw2,
                         lamP=lamP1,bP=bP1)
       }
       if(drop.type=="east"){
         data1a<-Data.sim(n=n1.dilute,shape=shape.0,scale=scale.0,Accrue=accrue.time,tau=tau.max,max.follow=max.follow,
-                        drop.type=drop.type,scale.drop=lambdac.0,Accrue.type=Accrue.type,Entry.obs=Entry1.dilute,S.type=S.type,S.0=S0.draw,tpoints.0=t0.draw,
+                        drop.type=drop.type,scale.drop=lambdac.0,Accrue.type=Accrue.type,Entry.obs=Entry1.dilute,S.type=S.type,S.0=S1.0,tpoints.0=t1.points,
                         R=rep(1,n1.dilute),gamma1=gamma1,gamma2=gamma2,bW=bW,lamW=lamW,lamT=lamT,beta1=beta1,beta2=beta2,cw1=cw1,cw2=cw2,
                         lamP=lamP1,bP=bP1)
       }
@@ -212,13 +214,13 @@ if(S.type!="Weibull-CR" & S.type!="exp_piecewise"){
       
       if(drop.type=="uniform"){
         data1b<-Data.sim(n=n1.nodilute,shape=shape.1,scale=scale.1,Accrue=accrue.time,tau=tau.max,max.follow=max.follow,
-                        drop.type=drop.type,cmin=a.1,cmax=b.1,Accrue.type=Accrue.type,Entry.obs=Entry1.nodilute,S.type=S.type,S.0=S1.draw,tpoints.0=t1.draw,
+                        drop.type=drop.type,cmin=a.1,cmax=b.1,Accrue.type=Accrue.type,Entry.obs=Entry1.nodilute,S.type=S.type,S.0=S1.0,tpoints.0=t1.points,
                         R=rep(1,n1.nodilute),gamma1=gamma1,gamma2=gamma2,bW=bW,lamW=lamW,lamT=lamT,beta1=beta1,beta2=beta2,cw1=cw1,cw2=cw2,
                         lamP=lamP1,bP=bP1)
       }
       if(drop.type=="east"){
         data1b<-Data.sim(n=n1.nodilute,shape=shape.1,scale=scale.1,Accrue=accrue.time,tau=tau.max,max.follow=max.follow,
-                        drop.type=drop.type,scale.drop=lambdac.1,Accrue.type=Accrue.type,Entry.obs=Entry1.nodilute,S.type=S.type,S.0=S1.draw,tpoints.0=t1.draw,
+                        drop.type=drop.type,scale.drop=lambdac.1,Accrue.type=Accrue.type,Entry.obs=Entry1.nodilute,S.type=S.type,S.0=S1.0,tpoints.0=t1.points,
                         R=rep(1,n1.nodilute),gamma1=gamma1,gamma2=gamma2,bW=bW,lamW=lamW,lamT=lamT,beta1=beta1,beta2=beta2,cw1=cw1,cw2=cw2,
                         lamP=lamP1,bP=bP1)
       }
@@ -231,14 +233,14 @@ if(S.type!="Weibull-CR" & S.type!="exp_piecewise"){
     # Control data
   if(drop.type=="uniform"){
     data0<-Data.sim(n=N0,shape=shape.0,scale=scale.0,Accrue=accrue.time,tau=tau.max,max.follow=max.follow,
-                    drop.type=drop.type,cmin=a.0,cmax=b.0,Accrue.type=Accrue.type,Entry.obs=Entry0.obs,S.type=S.type,S.0=S0.draw,tpoints.0=t0.draw,
+                    drop.type=drop.type,cmin=a.0,cmax=b.0,Accrue.type=Accrue.type,Entry.obs=Entry0.obs,S.type=S.type,S.0=S0.0,tpoints.0=t0.points,
                     R=rep(0,N0),gamma1=gamma1,gamma2=gamma2,bW=bW,lamW=lamW,lamT=lamT,beta1=beta1,beta2=beta2,cw1=cw1,cw2=cw2,
                     lamP=lamP0,bP=bP0)
   }
   
   if(drop.type=="east"){
     data0<-Data.sim(n=N0,shape=shape.0,scale=scale.0,Accrue=accrue.time,tau=tau.max,max.follow=max.follow,
-                    drop.type=drop.type,scale.drop=lambdac.0,Accrue.type=Accrue.type,Entry.obs=Entry0.obs,S.type=S.type,S.0=S0.draw,tpoints.0=t0.draw,
+                    drop.type=drop.type,scale.drop=lambdac.0,Accrue.type=Accrue.type,Entry.obs=Entry0.obs,S.type=S.type,S.0=S0.0,tpoints.0=t0.points,
                     R=rep(0,N0),gamma1=gamma1,gamma2=gamma2,bW=bW,lamW=lamW,lamT=lamT,beta1=beta1,beta2=beta2,cw1=cw1,cw2=cw2,
                     lamP=lamP0,bP=bP0)
   }
@@ -258,7 +260,6 @@ if(S.type!="Weibull-CR" & S.type!="exp_piecewise"){
   # Piecewise exponential
   
   if(S.type=="exp_piecewise"){
-    
   
     if(drop.type=="uniform"){
       data1<-Data.sim.piecewise(n=N1,Accrue=accrue.time,tau=tau.max,max.follow=max.follow,
@@ -270,9 +271,7 @@ if(S.type!="Weibull-CR" & S.type!="exp_piecewise"){
                                 nph.cp=nph.cp1,cp.tau=cp.tau1,
                                 drop.type=drop.type,scale.drop=lambdac.1,Accrue.type=Accrue.type,Entry.obs=Entry1.obs)
     }
-    
-    
-    if(drop.type=="uniform"){
+  if(drop.type=="uniform"){
       data0<-Data.sim.piecewise(n=N0,Accrue=accrue.time,tau=tau.max,max.follow=max.follow,
                                 nph.cp=nph.cp0,cp.tau=cp.tau0,
                                 drop.type=drop.type,cmin=a.0,cmax=b.0,Accrue.type=Accrue.type,Entry.obs=Entry0.obs)
@@ -289,7 +288,6 @@ if(S.type!="Weibull-CR" & S.type!="exp_piecewise"){
       df.sim1<-rbind(data0,data1)
     }
   }
-    
   
 # Competing-risk DGP
 
@@ -595,6 +593,7 @@ if(S.type=="Weibull-CR"){
             get.mean = get.mean,
             mean.draws = mean.draws,
             show.km = (sim <= kmplot.nsims),
+            what.plot=what.plot,
             titleit.IA = c("KM Interim"),
             titleit.FA = c("KM Final"),
             fit1 = fit1,
@@ -671,6 +670,10 @@ if(sim==1 & tau.look==tau.final) df.sim1<-Looks$df.cr
       show.status(ss=sim,t.start=t.start,sims=sims)
     }
   }
+  
+  t.end<-proc.time()[1]
+  t.min<-(t.end-t.start)/60
+  
   if(details){
     if(S.type=="CrossOver"){
       cat("# Xover Avg percent Control=",c(mean(xo0)),"\n")
@@ -722,8 +725,6 @@ if(sim==1 & tau.look==tau.final) df.sim1<-Looks$df.cr
     cat("# Max events=d(tau.max)","\n")
     cat("# Mean max events=",c(mean(d.maxs)),"\n")
 
-    t.end<-proc.time()[1]
-    t.min<-(t.end-t.start)/60
     
     est.1000<-t.min*(1000/sims)
     
@@ -988,7 +989,4 @@ Data.sim.piecewise<-function(n,Accrue,tau,cmin=NULL,cmax=NULL,Accrue.type='unifo
     names(data.sim)<-c("Entry","FollowUp","DropOut","TrueSurvival","Censoring","Event","Survival")
     return(data.sim)
 }
-
-
-
 

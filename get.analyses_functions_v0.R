@@ -3,7 +3,7 @@
 
 get.analyses<-function(sim,tau.interim,tau.final,Entry.1,D.1,T.1,Entry.0,D.0,T.0,quant,show.simcount=FALSE,direction="GT",
                        get.mean=FALSE,mean.draws=0,show.km=TRUE,get.final=FALSE,show.medians=FALSE,timing.scale=1,
-                       titleit.IA=c("KM Interim"),titleit.FA=c("KM Final"),fit1=NULL,fit2=NULL,
+                       titleit.IA=c("KM Interim"),titleit.FA=c("KM Final"),fit1=NULL,fit2=NULL,what.plot="KM",
                        show.interim.obs=FALSE){
   
   # tau.interim=tau.final --> final look
@@ -86,9 +86,14 @@ pval.lr<-1-pnorm(Z.lr)
     
     nE<-sum(Dtau)
     
-    kmfit<-KM.plot.2sample.weighted(Y=Ytau,E=Dtau,Treat=Ztau,risk.set=TRUE,by.risk=3,tpoints.add=c(-1,0),
+    
+    kmfit<-KM.plot.2sample.weighted(Y=Ytau,E=Dtau,Treat=Ztau,risk.set=TRUE,by.risk=3,tpoints.add=c(-1,0),what.plot=what.plot,
                                     xmin=0,xmax=max(Ytau),risk.cex=0.65,risk.add=max(Ytau),
                                     show.logrank=FALSE,show.med=FALSE,show.cox=FALSE,Xlab="Time")
+    
+   #fit.outcome<-survfit(Surv(Ytau,Dtau)~Ztau)
+   #plot(fit.outcome,ylim=c(0.0,1.0),conf.int=F,col=c("red","blue"),lwd=c(1,1),xlab="Time",mark.time=TRUE,fun='event')
+    
     #title(main=titleit.IA)
     if(show.medians){
       m1<-round(m1.interim,1); m0<-round(m0.interim,1)
